@@ -1,7 +1,7 @@
-﻿{
+{
   "name": "stripe-webhook",
   "version": "1.0.0",
-  "type": "module",
+  "private": true,
   "scripts": {
     "start": "node index.js"
   },
@@ -10,4 +10,3 @@
     "stripe": "^14.21.0"
   }
 }
-
