@@ -2,32 +2,54 @@
 import Stripe from "stripe";
 
 const app = express();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+/**
+ * IMPORTANT RULES FOR STRIPE WEBHOOKS:
+ * 1. Do NOT use express.json() before the webhook route
+ * 2. Use express.raw() ONLY for /webhook
+ * 3. Read secrets ONLY at runtime
+ */
+
+// Health check (GET is fine)
+app.get("/", (req, res) => {
+  res.status(200).send("Webhook server running");
+});
+
+// Webhook route — RAW body required
 app.post(
   "/webhook",
   express.raw({ type: "application/json" }),
   (req, res) => {
-    const sig = req.headers["stripe-signature"];
-
     let event;
+
     try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: "2023-10-16",
+      });
+
+      const signature = req.headers["stripe-signature"];
+
       event = stripe.webhooks.constructEvent(
         req.body,
-        sig,
+        signature,
         process.env.STRIPE_WEBHOOK_SECRET
       );
     } catch (err) {
-      console.error("❌ Webhook error:", err.message);
+      console.error("❌ Webhook verification failed:", err.message);
       return res.status(400).send("Webhook Error");
     }
 
-    console.log("✅ Event received:", event.type);
-    res.status(200).json({ received: true });
+    console.log("✅ Stripe event received:", event.type);
+
+    // You can add logic here later
+    // if (event.type === "checkout.session.completed") {}
+
+    return res.sendStatus(200);
   }
 );
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`🚀 Webhook server listening on ${port}`);
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server listening on port ${PORT}`);
 });
